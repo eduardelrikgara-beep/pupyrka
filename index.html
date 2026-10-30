@@ -25,6 +25,8 @@
    gameId вставить из панели GameMonetize: Dashboard → My games → Add game → 32-символьный Game ID.
    Обязательные условия сети: игра ЗАМИРАЕТ и ГЛУШИТ звук на время рекламы (SDK_GAME_PAUSE),
    возобновляется по SDK_GAME_START; вызов рекламы обязателен — sdk.showBanner(). */
+/* ВИТРИНА (GitHub Pages): реклама выключена. Монетизированная версия — в pupyrka-gamemonetize.zip */
+window.PUPYRKA_ADS = false;
 window.SDK_OPTIONS = {
   gameId: "bimen1ib6js6nbd5ulsaz42dbrse8jof",
   onEvent: function (a) {
@@ -37,6 +39,7 @@ window.SDK_OPTIONS = {
   }
 };
 (function (a, b, c) {
+  if (window.PUPYRKA_ADS === false) { console.log('[GM] витрина: реклама отключена'); return; }
   var d = a.getElementsByTagName(b)[0];
   if (a.getElementById(c)) return;
   var s = a.createElement(b); s.id = c; s.src = "https://api.gamemonetize.com/sdk.js";
@@ -246,6 +249,7 @@ window.gmResume = function () {             // реклама кончилась
   if (GM.pending) { var f = GM.pending; GM.pending = null; f(); }
 };
 function gmShowAd(force) {
+  if (window.PUPYRKA_ADS === false) return;
   var now = Date.now();
   if (!force && now - GM.lastAd < GM.minGap) return;
   if (typeof sdk === 'undefined' || !sdk.showBanner) { console.log('[GM] sdk недоступен — реклама пропущена'); return; }
