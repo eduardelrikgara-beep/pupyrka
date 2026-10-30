@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<!--
+  ═══════════════════════════════════════════════════════════════
+  🫧 «ПУПЫРКА» v3 — фиджет-игрушка Soft Crash Games (продакшен-кандидат №1)
+  Изюминка влита пятериком (приказ Командующего 12.10 «добавляй всё»):
+  1) 🎵 Музыкальный режим — пузыри = ноты пентатоники (drag-pop = мелодия)
+  2) 🐾 Фигурные плёнки — сердце/лапа/звезда/гриб/бокал (маски ASCII)
+  3) 🥤 Скин «Лимонад» — пенная газировка с фоновым шипением пузырьков
+     (алкотему не трогаем: возрастной рейтинг и модерация!)
+  4) 🌙 Режим «Дыхание» — авто-хлопки в ритме 4–2–6 (вдох–задержка–выдох)
+  5) 🎁 «Золотой пузырь» → анбоксинг стикеров Soft Crash Games (12 шт)
+  Монетизация: ТОЛЬКО rewarded по кнопке. Межстраничек нет — устав.
+  Я-сборка (Яндекс Игры): YaSDK (/sdk.js) + облачные сейвы + rewarded-only.
+  v3-слой (собран 15.10): сплэш «▶ Хлопать!», силикон-рамка + свет, 8 миссий,
+  серия 🔥, коллекция k/12 + кубок 🏆, постер 960×600.
+  ═══════════════════════════════════════════════════════════════
+-->
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Пупырка — вечная плёнка</title>
+<script>
+/* ═════════ GameMonetize SDK (замена YaSDK) ═════════
+   gameId вставить из панели GameMonetize: Dashboard → My games → Add game → 32-символьный Game ID.
+   Обязательные условия сети: игра ЗАМИРАЕТ и ГЛУШИТ звук на время рекламы (SDK_GAME_PAUSE),
+   возобновляется по SDK_GAME_START; вызов рекламы обязателен — sdk.showBanner(). */
+window.SDK_OPTIONS = {
+  gameId: "bimen1ib6js6nbd5ulsaz42dbrse8jof",
+  onEvent: function (a) {
+    switch (a.name) {
+      case 'SDK_READY': window.GM_READY = true; console.log('[GM] ready'); break;
+      case 'SDK_GAME_PAUSE': if (window.gmPause) window.gmPause(); break;
+      case 'SDK_GAME_START': if (window.gmResume) window.gmResume(); break;
+      case 'SDK_ERROR': console.log('[GM] sdk error'); break;
+    }
+  }
+};
+(function (a, b, c) {
+  var d = a.getElementsByTagName(b)[0];
+  if (a.getElementById(c)) return;
+  var s = a.createElement(b); s.id = c; s.src = "https://api.gamemonetize.com/sdk.js";
+  d.parentNode.insertBefore(s, d);
+})(document, "script", "gamemonetize-sdk");
+</script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+  html, body { height: 100%; overflow: hidden; background: #12121f; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; touch-action: none; }
+  #hud {
+    display: flex; align-items: center; gap: 6px; padding: 8px 10px; flex-wrap: nowrap;
+    background: rgba(255,255,255,.04); z-index: 5;
+  }
+  #counter { font-size: 1.1rem; font-weight: 700; color: #ffe9c9; white-space: nowrap; flex-shrink: 0; }
+  #streak { flex-shrink: 0; }
+  #session { font-size: .72rem; color: #9d9db8; flex: 1 1 auto; min-width: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #megaBtn .lbl { margin-left: 2px; }
+  @media (max-width: 470px) {
+    #megaBtn .lbl { display: none; }
+    #hud .hbtn { padding: 6px 7px; }
+    #session { font-size: .66rem; }
+    #session .sess, #session .sep { display: none; }  /* на узком экране важнее счётчик за всё время */
+  }
+  @media (max-width: 360px) {
+    #hud { gap: 4px; padding: 6px 8px; }
+    #hud .hbtn { padding: 5px 6px; font-size: .88rem; }
+    #counter { font-size: 1rem; }
+    #session { font-size: .6rem; }
+  }
+  .hbtn {
+    background: rgba(255,255,255,.09); border: 1px solid rgba(255,255,255,.18);
+    color: #fff; font-size: .95rem; padding: 7px 10px; border-radius: 12px; cursor: pointer;
+    flex-shrink: 0; white-space: nowrap;
+  }
+  .hbtn:active { transform: scale(.94); }
+  .hbtn.on { background: #2d6a4f; border-color: #52b788; }
+  #megaBtn { background: linear-gradient(135deg,#ff9f43,#ff6b6b); border: none; font-weight: 700; }
+  #board { flex: 1; position: relative; overflow: hidden; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+  /* Лавка-шторка */
+  #shop {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    background: #191927; border-top: 2px solid rgba(255,255,255,.12);
+    border-radius: 18px 18px 0 0; padding: 14px 16px 20px; max-height: 62vh; overflow-y: auto;
+    transform: translateY(110%); transition: transform .25s ease; color: #e8e8f5;
+  }
+  #shop.open { transform: translateY(0); }
+  #shop h2 { font-size: 1rem; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+  #shopClose { background: none; border: none; color: #9d9db8; font-size: 1.3rem; cursor: pointer; }
+  .group { font-size: .75rem; text-transform: uppercase; letter-spacing: 1px; color: #9d9db8; margin: 12px 0 6px; }
+  .sitem {
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    background: rgba(255,255,255,.06); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; font-size: .92rem;
+  }
+  .sitem .dot { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; }
+  .sitem .ic { font-size: 1.2rem; flex-shrink: 0; }
+  .sitem .nm { flex: 1; }
+  .act { font-size: .8rem; padding: 6px 10px; border-radius: 999px; border: none; cursor: pointer; white-space: nowrap; }
+  .act.sel { background: #2d6a4f; color: #d8f3dc; }
+  .act.buy { background: #ffd166; color: #3a2a00; font-weight: 700; }
+  .act.ad  { background: #6d597a; color: #fff; }
+  .act:disabled { opacity: .4; cursor: not-allowed; }
+  #stickers { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  #stickers span {
+    width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem; background: rgba(255,255,255,.06); border-radius: 10px; border: 1px solid rgba(255,255,255,.1);
+  }
+  #stickers span.lock { opacity: .28; filter: grayscale(1); }
+
+  /* Анбоксинг */
+  #unbox {
+    position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center;
+    background: rgba(5,5,12,.82); flex-direction: column; gap: 10px; cursor: pointer;
+  }
+  #unbox.show { display: flex; }
+  #unboxEmoji { font-size: 6.5rem; animation: stpop .45s cubic-bezier(.2,2.2,.4,1); }
+  #unboxName { color: #ffe9c9; font-weight: 700; font-size: 1.15rem; }
+  #unboxHint { color: #9d9db8; font-size: .78rem; }
+  @keyframes stpop { 0% { transform: scale(0) rotate(-25deg); } 100% { transform: scale(1) rotate(0); } }
+
+  /* Сплэш */
+  #splash {
+    position: fixed; inset: 0; z-index: 70; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 10px; text-align: center;
+    background: radial-gradient(circle at 50% 38%, #26264a 0%, #12121f 62%);
+    transition: opacity .4s ease; cursor: pointer;
+  }
+  #splash.hide { opacity: 0; pointer-events: none; }
+  .sp-logo { font-size: 4.2rem; animation: spfloat 3.2s ease-in-out infinite; }
+  @keyframes spfloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+  .sp-title { font-size: 2.6rem; font-weight: 800; color: #ffe9c9; letter-spacing: 1px; }
+  .sp-sub { color: #9d9db8; margin-top: -4px; }
+  .sp-stats { color: #c9c9e8; font-size: .86rem; margin-top: 6px; min-height: 18px; }
+  #spBtn {
+    margin-top: 14px; font-size: 1.25rem; font-weight: 800; color: #3a2a00;
+    background: linear-gradient(135deg, #ffd166, #ff9f43); border: none; border-radius: 999px;
+    padding: 15px 44px; cursor: pointer; box-shadow: 0 6px 0 #b26b00, 0 10px 22px #0009;
+  }
+  #spBtn:active { transform: translateY(3px); box-shadow: 0 3px 0 #b26b00; }
+  .sp-hint { color: #6f6f95; font-size: .78rem; max-width: 340px; }
+  /* Тост */
+  #toast {
+    position: fixed; left: 50%; top: 64px; transform: translate(-50%, -16px); z-index: 80;
+    background: #2d6a4f; color: #d8f3dc; padding: 9px 16px; border-radius: 999px;
+    font-size: .86rem; opacity: 0; transition: all .25s ease; pointer-events: none; white-space: nowrap;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+  /* Серия */
+  #streak { display: none; font-weight: 800; color: #ffb703; font-size: 1rem; }
+  #streak.on { display: inline-block; }
+  /* Миссии (шторка снизу, как лавка) */
+  #missions {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 21;
+    background: #191927; border-top: 2px solid rgba(255,255,255,.12);
+    border-radius: 18px 18px 0 0; padding: 14px 16px 20px; max-height: 62vh; overflow-y: auto;
+    transform: translateY(110%); transition: transform .25s ease; color: #e8e8f5;
+  }
+  #missions.open { transform: translateY(0); }
+  .mhead { font-size: 1rem; font-weight: 700; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+  #misClose { background: none; border: none; color: #9d9db8; font-size: 1.3rem; cursor: pointer; }
+  .sitem .nm small { color: #9d9db8; font-weight: 400; }
+  /* Прогресс коллекции */
+  #colProg { display: inline-block; margin: 2px 0 8px; padding: 4px 10px; border-radius: 999px; background: rgba(255,209,102,.14); color: #ffd166; font-size: .8rem; }
+  /* Постер */
+  #posterWrap {
+    position: fixed; inset: 0; z-index: 60; display: none; align-items: center; justify-content: center;
+    background: rgba(5,5,12,.85); flex-direction: column; gap: 10px; padding: 12px;
+  }
+  #posterWrap.show { display: flex; }
+  #posterCv { width: min(92vw, 720px); height: auto; border-radius: 14px; box-shadow: 0 18px 50px #000a; }
+  #posterHint { color: #9d9db8; font-size: .78rem; text-align: center; max-width: 460px; }
+</style>
+</head>
+<body>
+
+<div id="hud">
+  <div id="counter">🫧 0</div>
+  <div id="streak"></div>
+  <div id="session">за сессию: 0</div>
+  <button class="hbtn" id="megaBtn"><span class="ic">🎬</span><span class="lbl">Мега-хлоп</span></button>
+  <button class="hbtn" id="misBtn">🎯</button>
+  <button class="hbtn" id="posBtn">📸</button>
+  <button class="hbtn" id="musicBtn" title="Музыкальный режим: пузыри — ноты">🎵</button>
+  <button class="hbtn" id="breathBtn" title="Режим «Дыхание»">🌙</button>
+  <button class="hbtn" id="shopBtn">🛍</button>
+  <button class="hbtn" id="muteBtn">🔊</button>
+  <button class="hbtn" id="langBtn">🌐</button>
+</div>
+<div id="board"><canvas id="cv"></canvas></div>
+
+<div id="splash">
+  <div class="sp-logo">🫧</div>
+  <div class="sp-title" id="spTitle">Пупырка</div>
+  <div class="sp-sub" id="spTag">вечная плёнка</div>
+  <div class="sp-stats" id="spStats"></div>
+  <button id="spBtn">▶ Хлопать!</button>
+  <div class="sp-hint" id="spHint"></div>
+</div>
+<div id="toast"></div>
+
+<div id="shop">
+  <h2><span id="shopTitle">Лавка пузыря</span> <button id="shopClose">✕</button></h2>
+  <div class="group" id="grSheets">Фигуры плёнки</div><div id="sheetList"></div>
+  <div class="group" id="grSkins">Скины</div><div id="skinList"></div>
+  <div class="group" id="grSounds">Звуки хлопка (в режиме 🎵 не влияют)</div><div id="soundList"></div>
+  <div class="group" id="grStickers">Коллекция стикеров Soft Crash — 🫧 лови золотой пузырь!</div>
+  <div id="colProg"></div>
+  <div id="stickers"></div>
+</div>
+
+<div id="missions">
+  <div class="mhead"><span id="misTitle">🎯 Миссии</span><button id="misClose">✕</button></div>
+  <div id="misList"></div>
+</div>
+
+<div id="posterWrap">
+  <canvas id="posterCv" width="960" height="600"></canvas>
+  <div id="posterHint"></div>
+</div>
+
+<div id="unbox">
+  <div id="unboxEmoji">🎁</div>
+  <div id="unboxName"></div>
+  <div id="unboxHint">тап — забрать в коллекцию</div>
+</div>
+
+<script>
+// ═════════ СЛУЖЕБНАЯ ОБЁРТКА v3 (YaGames SDK + локальный фолбэк) ═════════
+// Провайдеры: 'ysdk' = Яндекс Игры (черновик/прод), 'none' = локальная отладка.
+// /sdk.js подключён в <head>: в консоли Яндекс Игр он есть всегда; локально —
+// тихо 404, и всё живёт на localStorage (PROVIDER остаётся 'none').
+let PROVIDER = 'none', ysdkRef = null, playerRef = null, readySent = false;
+const SAVE_KEY = 'pupyrka_v3';
+
+// ═════════ GameMonetize: пауза/мьют + межстраничная реклама ═════════
+var GM = { ready: false, paused: false, lastAd: 0, minGap: 60000, pops: 0, pending: null };
+window.gmPause = function () {              // реклама пошла: замираем и глушим
+  GM.paused = true;
+  try { if (AC && AC.state === 'running') AC.suspend(); } catch (e) {}
+};
+window.gmResume = function () {             // реклама кончилась: оживаем
+  GM.paused = false;
+  try { if (AC && AC.state === 'suspended') AC.resume(); } catch (e) {}
+  if (GM.pending) { var f = GM.pending; GM.pending = null; f(); }
+};
+function gmShowAd(force) {
+  var now = Date.now();
+  if (!force && now - GM.lastAd < GM.minGap) return;
+  if (typeof sdk === 'undefined' || !sdk.showBanner) { console.log('[GM] sdk недоступен — реклама пропущена'); return; }
+  GM.lastAd = now;
+  try { sdk.showBanner(); console.log('[GM] showBanner'); } catch (e) { console.log('[GM] showBanner error', e); }
+}
+
+
+function initSDK() {
+  if (!window.YaGames) { console.log('[SDK] офлайн-режим: localStorage-фолбэк'); return; }
+  window.YaGames.init().then(ysdk => {
+    ysdkRef = ysdk;
+    try {
+      const l = ysdk.environment && ysdk.environment.i18n && ysdk.environment.i18n.lang;
+      if (l) LANG = (String(l).slice(0, 2) === 'ru') ? 'ru' : 'en';
+    } catch (e) {}
+    PROVIDER = 'ysdk';
+    applyStaticTexts();
+    console.log('[SDK] YaSDK поднят, lang=' + LANG);
+    ysdk.getPlayer({ scopes: false }).then(p => { playerRef = p; syncFromCloud(); }).catch(() => {});
+    if (firstFrameDone) markReady();
+  }).catch(e => { console.log('[SDK] init не удался — фолбэк', e); });
+}
+
+function saveGame(s) {
+  try {
+    if (PROVIDER === 'ysdk' && playerRef) { playerRef.setData({ save_v3: s }, false).catch(() => {}); return; }
+  } catch (e) {}
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(s)); } catch (e) {}
+}
+function syncFromCloud() { // облако доезжает после getPlayer — берём, если не беднее локального
+  if (PROVIDER !== 'ysdk' || !playerRef) return;
+  try {
+    playerRef.getData(['save_v3', 'save_v2']).then(d => {
+      const o = (d && (d.save_v3 || d.save_v2));
+      if (o && o.wallet !== undefined && (o.total || 0) >= (S.total || 0)) {
+        Object.assign(S, o); S.v = 3; updateHUD(); renderShop(); renderMissions();
+        console.log('[SDK] сейв из облака');
+      }
+    }).catch(() => {});
+  } catch (e) {}
+}
+function loadGame() { // миграция сейвов: v3 → v2(gp) → v2 → v1
+  for (const k of [SAVE_KEY, 'pupyrka_v2_gp', 'pupyrka_v2', 'pupyrka_v1']) {
+    try { const r = localStorage.getItem(k); if (r) { const o = JSON.parse(r); o.v = 3; return o; } } catch (e) {}
+  }
+  return null;
+}
+
+// Межстраничек нет (устав): функция-заглушка, нигде не вызывается.
+function showFullscreenAd() { gmShowAd(false); }  // у GameMonetize реклама обязательна
+function showRewardedAd(onReward) { // награда — ТОЛЬКО за досмотр (onRewarded)
+  // GameMonetize: rewarded-видео не документирован → показываем межстраничник,
+  // награду выдаём по SDK_GAME_START (или через 8 с, если колбэк не пришёл)
+  if (typeof sdk !== 'undefined' && sdk.showBanner) {
+    GM.pending = onReward;
+    gmShowAd(true);
+    setTimeout(function () { if (GM.pending) { var f = GM.pending; GM.pending = null; f(); } }, 8000);
+    return;
+  }
+  if (PROVIDER === 'ysdk' && ysdkRef && ysdkRef.adv) {
+    let rewarded = false;
+    try {
+      ysdkRef.adv.showRewardedVideo({ callbacks: {
+        onRewarded: () => { rewarded = true; },
+        onClose: () => { if (rewarded) onReward(); },
+        onError: (e) => { console.log('[SDK] rewarded error', e); }
+      }});
+      return;
+    } catch (e) {}
+  }
+  console.log('[demo] реклама за награду'); onReward();
+}
+
+// ═════════ ВКУСНОСТИ v3: рамка, готовность, тост, сплэш ═════════
+let firstFrameDone = false;
+function markReady() { // LoadingAPI.ready — индикатор загрузки зелёный (≤90 с)
+  if (readySent || !ysdkRef) return; readySent = true;
+  try { ysdkRef.features.LoadingAPI.ready(); } catch (e) {}
+}
+let toastTimer = null;
+function toast(msg) {
+  const el = document.getElementById('toast'); if (!el) return;
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
+}
+function rrPath(g, x, y, w, h, r) {
+  g.beginPath(); g.moveTo(x + r, y);
+  g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
+}
+function drawFrame(t) { // силиконовая рамка плёнки + бегущий блик света
+  if (!gridW || !R) return;
+  const x = gridX, y = gridY, w = gridW, h = gridH, r = Math.max(10, R * 1.2);
+  const g = ctx.createLinearGradient(x, y, x, y + h);
+  g.addColorStop(0, 'rgba(255,255,255,.28)');
+  g.addColorStop(.5, 'rgba(255,255,255,.10)');
+  g.addColorStop(1, 'rgba(0,0,0,.35)');
+  ctx.save();
+  ctx.strokeStyle = g; ctx.lineWidth = Math.max(6, R * .34);
+  rrPath(ctx, x, y, w, h, r); ctx.stroke();
+  const ins = Math.max(3, R * .3);
+  ctx.strokeStyle = 'rgba(0,0,0,.22)'; ctx.lineWidth = Math.max(2, R * .1);
+  rrPath(ctx, x + ins, y + ins, w - ins * 2, h - ins * 2, Math.max(6, r - ins)); ctx.stroke();
+  const sw = w * .24, pos = ((t / 2800) % 1.5 - .25) * w;
+  const lg = ctx.createLinearGradient(x + pos - sw, y, x + pos + sw, y + h * .45);
+  lg.addColorStop(0, 'rgba(255,255,255,0)');
+  lg.addColorStop(.5, 'rgba(255,255,255,.20)');
+  lg.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.strokeStyle = lg; ctx.lineWidth = Math.max(5, R * .24);
+  rrPath(ctx, x, y, w, h, r); ctx.stroke();
+  ctx.restore();
+}
+const spEl = document.getElementById('splash');
+function hideSplash() { // старт по жесту: сплэш + разогрев WebAudio (политика автоплея)
+  if (!spEl || spEl.dataset.done) return;
+  spEl.dataset.done = '1'; spEl.classList.add('hide');
+  audio();
+  gmShowAd(true); // пре-ролл по жесту: сеть требует минимум один вызов showBanner()
+  setTimeout(dailyRoll, 700);    // удержание: рулон дня
+  setTimeout(weeklySheet, 2700); // и недельный лист — тосты не перебивают друг друга
+  setTimeout(() => { spEl.style.display = 'none'; }, 420);
+}
+if (spEl) spEl.addEventListener('click', hideSplash);
+
+// ═════════════════════ ЯЗЫКИ (п. 2.14: заявляем ru + en) ═══════════
+let LANG = (function () {          // язык интерфейса: ru только если браузер русскоязычный
+  try {
+    const list = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language || 'en'];
+    const first = String(list[0] || 'en').slice(0, 2).toLowerCase();
+    return first === 'ru' ? 'ru' : 'en';
+  } catch (e) { return 'en'; }
+})();
+const LANGS = {
+  ru: {
+    session: 'за сессию', shop: 'Лавка пузыря',
+    grSheets: 'Фигуры плёнки', grSkins: 'Скины', grSounds: 'Звуки хлопка (в режиме 🎵 не влияют)',
+    grStickers: 'Коллекция стикеров Soft Crash — лови золотой пузырь!',
+    chosenF: '✓ выбрана', chosenM: '✓ выбран', playing: '✓ играет', choose: 'выбрать', enable: 'включить',
+    adOpen: '📺 открыть', unboxHint: 'тап — забрать в коллекцию', full: 'Коллекция полная! +150 пузырей',
+    mega: '🎬 Мега-хлоп', megaAd: '🎬 Мега-хлоп 📺',
+    titleMusic: 'Музыкальный режим: пузыри — ноты', titleBreath: 'Режим «Дыхание»', titleShop: 'Лавка', titleMute: 'Звук',
+    mis: '🎯 Миссии', misBtnTitle: 'Миссии: восемь целей', misDone: 'выполнено',
+    posBtnTitle: 'Постер: картинка с твоими цифрами',
+    posHint: 'Тапни — и забирай скриншотом. Данные никуда не уходят: просто картинка.',
+    splashPlay: '▶ Хлопать!', splashHint: 'хлопай пузыри, лови серию 🔥 и собери коллекцию стикеров',
+    splashStats: 'рекорд: {t} 🫧 · лучшая серия ×{s}',
+    colTitle: 'Коллекция', trophy: 'кубок получен!',
+    posterName: 'Пупырка', posterSub: 'вечная плёнка · Soft Crash Games', posterFoot: 'v1.4',
+    pTotal: 'Всего хлопков', pSession: 'За эту сессию', pWallet: 'Пузырей в кошельке', pBest: 'Лучшая серия', pCol: 'Стикеры',
+    total: 'всего', dayToast: '🎁 Свежий рулон! +{n} 🫧 · день {d}', dayHint: '🎁 рулон дня ждёт',
+    weekSticker: '🗓️ Лист недели — в коллекции!', weekToast: '🗓️ Недельный лист: +{n} 🫧',
+    msToast: '🏅 {n} хлопков за всё время! +{b} 🫧'
+  },
+  en: {
+    session: 'this session', shop: 'Bubble Bazaar',
+    grSheets: 'Sheet shapes', grSkins: 'Skins', grSounds: 'Pop sounds (no effect in 🎵 mode)',
+    grStickers: 'Soft Crash sticker collection — catch the golden bubble!',
+    chosenF: '✓ chosen', chosenM: '✓ chosen', playing: '✓ playing', choose: 'choose', enable: 'enable',
+    adOpen: '📺 unlock', unboxHint: 'tap to add to the collection', full: 'Collection complete! +150 bubbles',
+    mega: '🎬 Mega-pop', megaAd: '🎬 Mega-pop 📺',
+    titleMusic: 'Music mode: bubbles are notes', titleBreath: 'Breathing mode', titleShop: 'Shop', titleMute: 'Sound',
+    mis: '🎯 Missions', misBtnTitle: 'Missions: eight goals', misDone: 'done',
+    posBtnTitle: 'Poster: a picture with your stats',
+    posHint: 'Tap and screenshot it. Nothing is uploaded — just a picture.',
+    splashPlay: '▶ Pop it!', splashHint: 'pop bubbles, keep the 🔥 streak, collect the sticker set',
+    splashStats: 'best: {t} 🫧 · top streak ×{s}',
+    colTitle: 'Collection', trophy: 'trophy unlocked!',
+    posterName: 'Pop-it Sheet', posterSub: 'endless sheet · Soft Crash Games', posterFoot: 'v1.4',
+    pTotal: 'Total pops', pSession: 'This session', pWallet: 'Bubbles in wallet', pBest: 'Top streak', pCol: 'Stickers',
+    total: 'total', dayToast: '🎁 Fresh roll! +{n} 🫧 · day {d}', dayHint: '🎁 daily roll waiting',
+    weekSticker: '🗓️ Wrap of the Week — collected!', weekToast: '🗓️ Weekly sheet: +{n} 🫧',
+    msToast: '🏅 {n} pops all time! +{b} 🫧'
+  }
+};
+const T = k => (LANGS[LANG] && LANGS[LANG][k]) || LANGS.ru[k] || k;
+const nameOf = it => (LANG === 'en' && it.en) ? it.en : it.name;
+
+// ═════════════════════ КАТАЛОГИ ═════════════════════
+const SKINS = [
+  { id:'rainbow', name:'Радуга',  en:'Rainbow',  price:0,    bg:'#12121f', dome:(i,c)=>`hsl(${((i%c)*26 + Math.floor(i/c)*8 + 330)%360} 88% 62%)`, pop:'#ffd166' },
+  { id:'neon',    name:'Неон',    en:'Neon',     price:250,  bg:'#05050c', dome:(i,c)=>`hsl(${((i%c)*26 + 150)%360} 100% 55%)`, pop:'#72efdd' },
+  { id:'choco',   name:'Шоколад', en:'Chocolate', price:800,  bg:'#1d130c', dome:()=>`hsl(24 55% ${46 + Math.random()*8}%)`, pop:'#d9a066' },
+  { id:'limonad', name:'Лимонад', en:'Lemonade', price:600,  bg:'#2a1a03', bg2:'#4a3404', dome:(i,c)=>`hsl(${48 - (i%3)*6} 95% ${62 - (i%2)*8}%)`, pop:'#ffe066', fizz:true },
+  { id:'cosmos',  name:'Космос 📺', en:'Cosmos 📺', price:'ad', bg:'#0b0620', dome:(i,c)=>`hsl(${250 + ((i*37)%60)} 70% 68%)`, pop:'#c77dff' },
+];
+const SOUNDS = [
+  { id:'classic', name:'Классика', en:'Classic', price:0,   bp:1900, decay:.035 },
+  { id:'slime',   name:'Слайм',    en:'Slime',   price:400, bp:650,  decay:.09 },
+  { id:'bit8',    name:'8-бит 📺', en:'8-bit 📺', price:'ad', bp:0,   decay:.05, square:true },
+];
+// Фигурные плёнки: '#' = пузырь, '.' = пусто. Рисуются ASCII-масками.
+function norm(rows) { const w = Math.max(...rows.map(r => r.length)); return rows.map(r => r.padEnd(w, '.')); }
+const SHEETS = [
+  { id:'rect', name:'Классика', en:'Classic', icon:'▦', price:0, mask: norm(['#'.repeat(11),'#'.repeat(11),'#'.repeat(11),'#'.repeat(11),'#'.repeat(11),'#'.repeat(11),'#'.repeat(11),'#'.repeat(11)]) },
+  { id:'heart', name:'Сердце', en:'Heart', icon:'❤️', price:150, mask: norm(['..###.###..','.#########.','###########','###########','.#########.','..#######..','...#####...','....###....','.....#.....']) },
+  { id:'paw', name:'Лапа', en:'Paw', icon:'🐾', price:300, mask: norm(['.##.##.##..','.##.##.##..','...........','...#####...','..#######..','.#########.','.#########.','..#######..','...#####...']) },
+  { id:'star', name:'Звезда', en:'Star', icon:'⭐', price:300, mask: norm(['.....#.....','....###....','..#######..','###########','.#########.','..#######..','..###.###..','.##.....##.']) },
+  { id:'mush', name:'Гриб', en:'Mushroom', icon:'🍄', price:300, mask: norm(['....###....','..#######..','.#########.','###########','###.###.###','##..###..##','....###....','....###....','...#####...']) },
+  { id:'glass', name:'Бокал 📺', en:'Glass 📺', icon:'🥤', price:'ad', mask: norm(['###########','.#########.','..#######..','..#######..','...#####...','...#####...','....###....','..#######..','###########']) },
+];
+const STICKERS = [
+  { id:'kolobok', e:'🥯', name:'Колобок-48К', en:'Kolobok-48K' },
+  { id:'kaska',   e:'⛑️', name:'Каска Судьбы', en:'Fate Helmet' },
+  { id:'armor',   e:'🛡️', name:'Броня Ала', en:"Al's Armor" },
+  { id:'dubna',   e:'💻', name:'«Дубна-48К»', en:'"Dubna-48K"' },
+  { id:'kat',     e:'📼', name:'Катушечник', en:'Reel Deck' },
+  { id:'foxguard',e:'🦊', name:'Лис-Вахтёр', en:'Fox Guard' },
+  { id:'limonad', e:'🥤', name:'Фирменный лимонад', en:'Signature Soda' },
+  { id:'mush',    e:'🍄', name:'Шляпка-плёнка', en:'Mushroom Cap' },
+  { id:'paw',     e:'🐾', name:'След лапушки', en:'Pawprint' },
+  { id:'note',    e:'🎵', name:'Drag Slave', en:'Drag Slave' },
+  { id:'storm',   e:'⚡', name:'Молния Самосбора', en:'Samosbor Bolt' },
+  { id:'pechat',  e:'🤜', name:'Печать братства', en:'Brotherhood Seal' },
+  { id:'weekly',  e:'🗓️', name:'Лист недели', en:'Wrap of the Week', weekly:true },
+];
+
+// ═════════════════════ СОСТОЯНИЕ ═════════════════════
+const S = Object.assign({
+  v: 3, wallet: 0, total: 0,
+  skins: ['rainbow'], sounds: ['classic'], sheets: ['rect'],
+  skin: 'rainbow', sound: 'classic', sheet: 'rect',
+  stickers: [], megaFree: true, muted: false, music: false, breath: false,
+  flips: 0, golds: 0, megaCount: 0, musicPops: 0, breathPops: 0, bestStreak: 0, mis: {},
+  lastDay: '', dayStreak: 0, weekAt: 0, msDone: [],
+}, loadGame() || {});
+S.v = 3; if (!S.mis) S.mis = {}; if (!Array.isArray(S.msDone)) S.msDone = [];
+let sessionPops = 0, streak = 0, streakT = 0;
+
+// ═════════════════════ ЗВУК (WebAudio) ═════════════════════
+let AC = null, noiseBuf = null;
+function audio() {
+  if (!AC) { AC = new (window.AudioContext || window.webkitAudioContext)();
+    noiseBuf = AC.createBuffer(1, AC.sampleRate * 0.12, AC.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  }
+  if (AC.state === 'suspended') AC.resume();
+  return AC;
+}
+function popSound(det) {
+  if (S.muted) return;
+  try {
+    const ac = audio(), t = ac.currentTime;
+    const cfg = SOUNDS.find(x => x.id === S.sound) || SOUNDS[0];
+    const g = ac.createGain(); g.connect(ac.destination);
+    g.gain.setValueAtTime(.5, t); g.gain.exponentialRampToValueAtTime(.001, t + cfg.decay * 2.2);
+    if (cfg.square) {
+      const o = ac.createOscillator(); o.type = 'square';
+      const f = 620 * (det || 1); o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * 1.7, t + .03);
+      o.connect(g); o.start(t); o.stop(t + cfg.decay * 2.2);
+    } else {
+      const src = ac.createBufferSource(); src.buffer = noiseBuf;
+      const bp = ac.createBiquadFilter(); bp.type = 'bandpass';
+      bp.frequency.value = cfg.bp * (det || 1); bp.Q.value = 9;
+      src.connect(bp); bp.connect(g); src.start(t); src.stop(t + cfg.decay * 2.2);
+    }
+    const o2 = ac.createOscillator(), g2 = ac.createGain();
+    o2.type = 'sine'; o2.frequency.setValueAtTime(300 * (det || 1), t);
+    o2.frequency.exponentialRampToValueAtTime(110, t + .06);
+    g2.gain.setValueAtTime(.35, t); g2.gain.exponentialRampToValueAtTime(.001, t + .07);
+    o2.connect(g2); g2.connect(ac.destination); o2.start(t); o2.stop(t + .08);
+  } catch (e) {}
+}
+// 🎵 пентатоника: k-й «лоток» снизу → нота (C-maj пентатоника через октавы)
+const PEN = [0, 2, 4, 7, 9];
+function noteFreq(k) { return 220 * Math.pow(2, (PEN[k % 5] + 12 * Math.floor(k / 5)) / 12); }
+function playNote(k) {
+  if (S.muted) return;
+  try {
+    const ac = audio(), t = ac.currentTime, f = noteFreq(k);
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = 'triangle'; o.frequency.value = f;
+    g.gain.setValueAtTime(.32, t); g.gain.exponentialRampToValueAtTime(.001, t + .32);
+    o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + .33);
+    const o2 = ac.createOscillator(), g2 = ac.createGain(); // лёгкий блеск сверху
+    o2.type = 'sine'; o2.frequency.value = f * 2;
+    g2.gain.setValueAtTime(.12, t); g2.gain.exponentialRampToValueAtTime(.001, t + .18);
+    o2.connect(g2); g2.connect(ac.destination); o2.start(t); o2.stop(t + .2);
+    const src = ac.createBufferSource(); src.buffer = noiseBuf; // тик атаки
+    const hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 3000;
+    const g3 = ac.createGain(); g3.gain.setValueAtTime(.12, t); g3.gain.exponentialRampToValueAtTime(.001, t + .02);
+    src.connect(hp); hp.connect(g3); g3.connect(ac.destination); src.start(t); src.stop(t + .03);
+  } catch (e) {}
+}
+function fanfare() { if (S.muted) return; [0, 4, 7].forEach((k, i) => setTimeout(() => playNoteFn(k), i * 110)); }
+function playNoteFn(k){ playNoteRaw(523 * Math.pow(2, k / 12)); }
+function playNoteRaw(f){ try { const ac = audio(), t = ac.currentTime;
+  const o = ac.createOscillator(), g = ac.createGain(); o.type='triangle'; o.frequency.value=f;
+  g.gain.setValueAtTime(.3,t); g.gain.exponentialRampToValueAtTime(.001,t+.35);
+  o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t+.36); } catch(e){} }
+function whoosh() {
+  if (S.muted) return;
+  try {
+    const ac = audio(), t = ac.currentTime;
+    const src = ac.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
+    const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 1.2;
+    bp.frequency.setValueAtTime(300, t); bp.frequency.exponentialRampToValueAtTime(3200, t + .3);
+    bp.frequency.exponentialRampToValueAtTime(300, t + .6);
+    const g = ac.createGain(); g.gain.setValueAtTime(.0001, t);
+    g.gain.exponentialRampToValueAtTime(.35, t + .25); g.gain.exponentialRampToValueAtTime(.0001, t + .6);
+    src.connect(bp); bp.connect(g); g.connect(ac.destination); src.start(t); src.stop(t + .62);
+  } catch (e) {}
+}
+
+// ═════════════════════ ПОЛЕ: фигуры, пузыри, золотой ═════════════════════
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+const DPR = Math.min(2, window.devicePixelRatio || 1);
+let W = 0, H = 0, R = 0, ox = 0, oy = 0;
+let gridX = 0, gridY = 0, gridW = 0, gridH = 0;
+let cells = [];           // {x,y,row,popped,popT,gold,cIdx}
+let particles = [];
+let phase = 'play';       // play | flipWait | flipOut | flipIn
+let flipT = 0, shakeT = 0;
+let breathT = 0, breathPop = 0;   // режим «Дыхание»
+let fizzT = 0;                    // шипение лимонада
+
+function curSheet() { return SHEETS.find(s => s.id === S.sheet) || SHEETS[0]; }
+function skin() { return SKINS.find(x => x.id === S.skin) || SKINS[0]; }
+
+function buildCells(keepPopRatio) {
+  const rect = cv.parentElement.getBoundingClientRect();
+  W = rect.width; H = rect.height;
+  cv.width = W * DPR; cv.height = H * DPR; ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const mask = curSheet().mask;
+  const rows = mask.length, cols = mask[0].length;
+  R = Math.min(W / (cols + 1.6), H / (rows + 1.6)) / 2;
+  ox = (W - cols * 2 * R) / 2 + R;
+  oy = (H - rows * 2 * R) / 2 + R;
+  gridX = ox - R * 1.25; gridY = oy - R * 1.25;
+  gridW = cols * 2 * R + R * 2.5; gridH = rows * 2 * R + R * 2.5;
+  const prev = cells;
+  cells = [];
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    if (mask[r][c] !== '#') continue;
+    cells.push({ x: ox + c * 2 * R, y: oy + r * 2 * R, row: rows - 1 - r, r0: r, c0: c, popped: false, popT: 0, gold: false, cIdx: cells.length });
+  }
+  // золотой пузырь: 18% шанс на новую плёнку
+  if (cells.length > 8 && Math.random() < .18) cells[Math.floor(Math.random() * cells.length)].gold = true;
+  return prev;
+}
+function refillFromFlip() { // то же поле, заново: после переворота — и новый шанс золотого
+  cells.forEach(c => { c.popped = false; c.gold = false; });
+  if (cells.length > 8 && Math.random() < .18) cells[Math.floor(Math.random() * cells.length)].gold = true;
+}
+
+function spawnPopFX(x, y, color, big) {
+  particles.push({ x, y, r: R * .3, vr: 90, c: color, a: 1, vanish: 'ring' });
+  const n = big ? 10 : 5;
+  for (let i = 0; i < n; i++) {
+    const an = Math.random() * 6.28, sp = 40 + Math.random() * (big ? 190 : 110);
+    particles.push({ x, y, dx: Math.cos(an) * sp, dy: Math.sin(an) * sp - 40, r: 2 + Math.random() * 3, c: color, a: 1, vanish: 'dot', life: .5 + Math.random() * .3 });
+  }
+}
+
+let soundBudget = 0;
+function doPop(cell, quiet) {
+  cell.popped = true; cell.popT = performance.now();
+  S.wallet++; S.total++; sessionPops++; milestones();
+  streak++; streakT = 1.6; if (streak > S.bestStreak) S.bestStreak = streak;
+  if (S.music) S.musicPops++; if (S.breath) S.breathPops++;
+  if (cell.gold) { cell.gold = false; S.golds++; spawnPopFX(cell.x, cell.y, '#ffd700', true); setTimeout(() => unboxSticker(), 260); }
+  else spawnPopFX(cell.x, cell.y, skin().pop);
+  if (!quiet) {
+    if (soundBudget < 4) {
+      soundBudget++;
+      if (S.music) playNote(cell.row); else popSound(.9 + Math.random() * .25);
+    }
+    if (navigator.vibrate) try { navigator.vibrate(7); } catch (e) {}
+  }
+  updateHUD();
+  if (cells.every(c => c.popped) && phase === 'play') {
+    phase = 'flipWait'; setTimeout(() => { phase = 'flipOut'; flipT = 0; whoosh(); }, 420);
+  }
+  scheduleSave(); missionTick();
+  GM.pops++;
+  if (GM.pops % 120 === 0) gmShowAd(false); // редкий межстраничник: не чаще раза в 60 с
+}
+
+// ── удержание: рулон дня, недельный лист, вехи за всё время ──
+function updateSplashHint() {
+  const el = document.getElementById('spHint'); if (!el) return;
+  el.textContent = T('splashHint') + (S.lastDay !== dayKey(0) ? ' · ' + T('dayHint') : '');
+}
+function dayKey(shift) {
+  const d = new Date(Date.now() + (shift || 0) * 864e5);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function dailyRoll() {                       // раз в сутки: монеты + серия дней
+  const t = dayKey(0);
+  if (S.lastDay === t) return 0;
+  S.dayStreak = (S.lastDay === dayKey(-1)) ? (S.dayStreak || 0) + 1 : 1;
+  const n = 60 + 40 * Math.min(S.dayStreak - 1, 6);   // 60 … 300
+  S.wallet += n; S.lastDay = t; scheduleSave(); updateHUD(); renderShop(); updateSplashHint();
+  toast(T('dayToast').replace('{n}', n).replace('{d}', S.dayStreak));
+  return n;
+}
+function weeklySheet() {                     // раз в неделю: стикер, потом монеты
+  const WEEK = 6.5 * 864e5;
+  if (S.weekAt && Date.now() - S.weekAt < WEEK) return;
+  let msg;
+  if (!S.stickers.includes('weekly')) { S.stickers.unshift('weekly'); msg = T('weekSticker'); }
+  else { const n = 150; S.wallet += n; msg = T('weekToast').replace('{n}', n); }
+  S.weekAt = Date.now(); scheduleSave(); updateHUD(); renderShop(); toast(msg);
+}
+const MILES = [1000, 5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000];
+function milestones() {                       // личная отметка: чем больше всего хлопков, тем чаще
+  for (const m of MILES) {
+    if (S.total >= m && S.msDone.indexOf(m) < 0) {
+      S.msDone.push(m);
+      const b = Math.round(m / 20);
+      S.wallet += b; scheduleSave(); updateHUD(); renderShop();
+      const msg = T('msToast').replace('{n}', m.toLocaleString(LANG === 'ru' ? 'ru' : 'en')).replace('{b}', b);
+      setTimeout(() => toast(msg), 420); // не перебиваем тост миссии
+    }
+  }
+}
+
+function setMegaLabel() {
+  const el = document.getElementById('megaBtn'); if (!el) return;
+  el.innerHTML = '<span class="ic">🎬</span><span class="lbl">' +
+    (S.megaFree ? T('mega') : T('megaAd')).replace(/^🎬\s*/, '') + '</span>';
+}
+
+function updateHUD() {
+  document.getElementById('counter').textContent = '🫧 ' + S.wallet.toLocaleString(LANG === 'ru' ? 'ru' : 'en');
+  const sEl = document.getElementById('session');
+  sEl.innerHTML = '<span class="sess">' + T('session') + ': ' + sessionPops + '</span>' +
+    '<span class="sep"> · </span><span class="life">' + T('total') + ': ' +
+    S.total.toLocaleString(LANG === 'ru' ? 'ru' : 'en') + '</span>';
+  const st = document.getElementById('streak');
+  if (st) { if (streak >= 3) { st.textContent = '🔥 ×' + streak; st.classList.add('on'); } else { st.textContent = ''; st.classList.remove('on'); } }
+}
+
+function tryHit(px, py) {
+  if (phase !== 'play' || GM.paused) return;
+  for (let i = 0; i < cells.length; i++) {
+    const c = cells[i];
+    if (c.popped) continue;
+    const dx = px - c.x, dy = py - c.y;
+    if (dx * dx + dy * dy < R * R * .92) { doPop(c, false); return; }
+  }
+}
+
+const activePtr = new Map();
+cv.addEventListener('pointerdown', e => { activePtr.set(e.pointerId, { x: e.offsetX, y: e.offsetY }); tryHit(e.offsetX, e.offsetY); });
+cv.addEventListener('pointermove', e => {
+  if (!activePtr.has(e.pointerId)) return;
+  const p = activePtr.get(e.pointerId);
+  const steps = Math.max(1, Math.ceil(Math.hypot(e.offsetX - p.x, e.offsetY - p.y) / (R * .6)));
+  for (let s = 1; s <= steps; s++) tryHit(p.x + (e.offsetX - p.x) * s / steps, p.y + (e.offsetY - p.y) * s / steps);
+  p.x = e.offsetX; p.y = e.offsetY;
+});
+['pointerup', 'pointercancel', 'pointerleave'].forEach(t => cv.addEventListener(t, e => activePtr.delete(e.pointerId)));
+
+// ═════════════════════ 🎁 СТИКЕРЫ ═════════════════════
+const unboxEl = document.getElementById('unbox');
+function unboxSticker() {
+  let pool = STICKERS.filter(st => !st.weekly && !S.stickers.includes(st.id));
+    if (!pool.length) { S.wallet += 150; // коллекция собрана → золотой платит монетой
+    flashUnbox('🫧', T('full')); updateHUD(); scheduleSave(); return; }
+  const st = pool[Math.floor(Math.random() * pool.length)];
+  S.stickers.push(st.id); scheduleSave(); fanfare();
+  flashUnbox(st.e, st.name);
+  renderShop();
+}
+function flashUnbox(e, name) {
+  document.getElementById('unboxEmoji').textContent = e;
+  document.getElementById('unboxName').textContent = name;
+  unboxEl.classList.add('show');
+}
+unboxEl.addEventListener('click', () => unboxEl.classList.remove('show'));
+
+// ═════════════════════ 🎬 МЕГА-ХЛОП ═════════════════════
+function megaPop() {
+  if (phase !== 'play') return;
+  const cx = W / 2, cyy = H / 2; let maxD = 0;
+  cells.forEach(c => { c.d = Math.hypot(c.x - cx, c.y - cyy); maxD = Math.max(maxD, c.d); });
+  shakeT = .55; S.megaCount++; missionTick();
+  cells.forEach(c => { if (!c.popped) setTimeout(() => doPop(c, true), (c.d / maxD) * 520); });
+  if (S.music) [0, 2, 4, 7, 9].forEach((k, i) => setTimeout(() => playNote(k + 5), i * 90));
+  else { popSound(.8); setTimeout(() => popSound(.95), 140); setTimeout(() => popSound(1.1), 300); }
+}
+document.getElementById('megaBtn').addEventListener('click', () => {
+    if (S.megaFree) { S.megaFree = false; scheduleSave(); megaPop(); setMegaLabel(); }
+  else showRewardedAd(() => megaPop());
+});
+
+// ═════════════════════ 🎯 МИССИИ (8) ═════════════════════
+const MISSIONS = [
+  { id: 'm1', metric: 'total',      goal: 50,  rew: 50,  name: 'Полтинник',       en: 'Fifty pops' },
+  { id: 'm2', metric: 'total',      goal: 300, rew: 150, name: 'Триста хлопков',  en: 'Three hundred pops' },
+  { id: 'm3', metric: 'golds',      goal: 1,   rew: 60,  name: 'Первый золотой',  en: 'First golden bubble' },
+  { id: 'm4', metric: 'golds',      goal: 10,  rew: 200, name: 'Золотая десятка', en: 'Golden ten' },
+  { id: 'm5', metric: 'megaCount',  goal: 1,   rew: 40,  name: 'Мега-хлоп',       en: 'Mega-pop' },
+  { id: 'm6', metric: 'flips',      goal: 10,  rew: 120, name: 'Крути-верти',     en: 'Flip master' },
+  { id: 'm7', metric: 'musicPops',  goal: 50,  rew: 120, name: 'Музыкант',        en: 'Musician' },
+  { id: 'm8', metric: 'breathPops', goal: 30,  rew: 100, name: 'Дыхание',         en: 'Breathing' },
+];
+const metricVal = m => S[m.metric] || 0;
+const missionDone = m => S.mis && S.mis[m.id] === true;
+function missionTick() {
+  let changed = false;
+  for (const m of MISSIONS) {
+    if (missionDone(m) || metricVal(m) < m.goal) continue;
+    S.mis[m.id] = true; S.wallet += m.rew; changed = true;
+    toast('✅ ' + nameOf(m) + ' · +' + m.rew + ' 🫧'); fanfare();
+  }
+  if (changed) { updateHUD(); renderShop(); renderMissions(); scheduleSave(); }
+}
+function renderMissions() {
+  const box = document.getElementById('misList'); if (!box) return;
+  box.innerHTML = ''; let doneN = 0;
+  for (const m of MISSIONS) {
+    const done = missionDone(m); if (done) doneN++;
+    const row = document.createElement('div'); row.className = 'sitem';
+    const ic = document.createElement('div'); ic.className = 'ic'; ic.textContent = done ? '✅' : '🎯';
+    const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = nameOf(m) + ' ';
+    const sm = document.createElement('small');
+    sm.textContent = Math.min(metricVal(m), m.goal) + '/' + m.goal + ' · +' + m.rew + ' 🫧' + (done ? ' · ' + T('misDone') : '');
+    nm.appendChild(sm); row.append(ic, nm); box.appendChild(row);
+  }
+  const t = document.getElementById('misTitle');
+  if (t) t.textContent = T('mis') + ' ' + doneN + '/' + MISSIONS.length;
+}
+MILES.forEach(m => { if (S.total >= m && S.msDone.indexOf(m) < 0) S.msDone.push(m); }); // старые сейвы: не платим за прошлое
+const misEl = document.getElementById('missions');
+document.getElementById('misBtn').addEventListener('click', () => misEl.classList.toggle('open'));
+document.getElementById('misClose').addEventListener('click', () => misEl.classList.remove('open'));
+
+// ═════════════════════ 📸 ПОСТЕР 960×600 ═════════════════════
+const posterWrap = document.getElementById('posterWrap');
+document.getElementById('posBtn').addEventListener('click', openPoster);
+posterWrap.addEventListener('click', () => posterWrap.classList.remove('show'));
+function openPoster() {
+  const cvp = document.getElementById('posterCv');
+  if (!cvp) return;
+  const g = cvp.getContext('2d');
+  const Wp = 960, Hp = 600;
+  const gr = g.createLinearGradient(0, 0, 0, Hp);
+  gr.addColorStop(0, '#12121f'); gr.addColorStop(1, '#2a1a3a');
+  g.fillStyle = gr; g.fillRect(0, 0, Wp, Hp);
+  for (let i = 0; i < 26; i++) { // декоративные пузыри по краям
+    const bx = Math.random() * Wp, by = Math.random() * Hp;
+    if (bx > 150 && bx < Wp - 150 && by > 110 && by < Hp - 110) continue;
+    const br = 7 + Math.random() * 24;
+    const g2 = g.createRadialGradient(bx - br * .3, by - br * .35, br * .1, bx, by, br);
+    g2.addColorStop(0, 'rgba(255,255,255,.4)');
+    g2.addColorStop(.3, 'hsl(' + (Math.random() * 360 | 0) + ' 85% 62%)');
+    g2.addColorStop(1, 'rgba(0,0,0,.4)');
+    g.fillStyle = g2; g.beginPath(); g.arc(bx, by, br, 0, 7); g.fill();
+  }
+  g.strokeStyle = 'rgba(255,255,255,.22)'; g.lineWidth = 3; rrPath(g, 16, 16, Wp - 32, Hp - 32, 26); g.stroke();
+  g.fillStyle = '#ffe9c9'; g.font = '800 64px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+  g.fillText(T('posterName'), 60, 118);
+  g.fillStyle = '#9d9db8'; g.font = '26px system-ui, sans-serif';
+  g.fillText(T('posterSub'), 60, 158);
+  const rows = [
+    [T('pTotal'), S.total], [T('pSession'), sessionPops], [T('pWallet'), S.wallet],
+    [T('pBest'), S.bestStreak], [T('pCol'), S.stickers.length + '/' + STICKERS.length],
+  ];
+  let y = 250;
+  for (const row of rows) {
+    g.fillStyle = '#9d9db8'; g.font = '30px system-ui, sans-serif'; g.fillText(row[0], 60, y);
+    g.fillStyle = '#ffe9c9'; g.font = '800 34px system-ui, sans-serif'; g.fillText(String(row[1]), 520, y);
+    y += 56;
+  }
+  g.fillStyle = '#6f6f95'; g.font = '22px system-ui, sans-serif';
+  g.fillText(new Date().toLocaleDateString(LANG === 'ru' ? 'ru-RU' : 'en-GB') + ' · ' + T('posterFoot'), 60, Hp - 54);
+  posterWrap.classList.add('show');
+}
+
+// ═════════════════════ КНОПКИ РЕЖИМОВ ═════════════════════
+const musicBtn = document.getElementById('musicBtn');
+musicBtn.addEventListener('click', () => { S.music = !S.music; musicBtn.classList.toggle('on', S.music); scheduleSave(); if (S.music) playNote(5); });
+const breathBtn = document.getElementById('breathBtn');
+breathBtn.addEventListener('click', () => { S.breath = !S.breath; breathBtn.classList.toggle('on', S.breath); breathT = 0; scheduleSave(); });
+document.getElementById('muteBtn').addEventListener('click', () => {
+  S.muted = !S.muted; document.getElementById('muteBtn').textContent = S.muted ? '🔇' : '🔊'; scheduleSave();
+});
+
+// ═════════════════════ ЛАВКА ═════════════════════
+const shopEl = document.getElementById('shop');
+document.getElementById('shopBtn').addEventListener('click', () => shopEl.classList.toggle('open'));
+document.getElementById('langBtn').addEventListener('click', () => {
+  LANG = (LANG === 'ru') ? 'en' : 'ru';
+  S.lang = LANG;
+  try { document.documentElement.lang = LANG; } catch (e) {}
+  applyStaticTexts(); renderMissions(); updateHUD(); saveGame(S);
+  toast(LANG === 'en' ? 'Language: English' : 'Язык: русский');
+});
+document.getElementById('shopClose').addEventListener('click', () => shopEl.classList.remove('open'));
+
+function rowEl(label, iconHTML, btnText, btnCls, disabled, onClick) {
+  const row = document.createElement('div'); row.className = 'sitem';
+  const ic = document.createElement('div'); ic.className = 'ic'; ic.innerHTML = iconHTML;
+  const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = label;
+  const btn = document.createElement('button'); btn.className = 'act ' + btnCls;
+  btn.textContent = btnText; btn.disabled = disabled; if (onClick) btn.onclick = onClick;
+  row.append(ic, nm, btn); return row;
+}
+
+function renderShop() {
+  // Фигуры
+  const sh = document.getElementById('sheetList'); sh.innerHTML = '';
+  SHEETS.forEach(f => {
+    const owned = S.sheets.includes(f.id), active = S.sheet === f.id;
+    let el;
+    if (active) el = rowEl(nameOf(f), f.icon, T('chosenF'), 'sel', true);
+    else if (owned) el = rowEl(nameOf(f), f.icon, T('choose'), 'sel', false, () => { S.sheet = f.id; scheduleSave(); buildCells(); renderShop(); });
+    else if (f.price === 'ad') el = rowEl(nameOf(f), f.icon, T('adOpen'), 'ad', false, () => showRewardedAd(() => { S.sheets.push(f.id); S.sheet = f.id; scheduleSave(); buildCells(); renderShop(); }));
+    else el = rowEl(nameOf(f), f.icon, '🫧 ' + f.price, 'buy', S.wallet < f.price, () => { S.wallet -= f.price; S.sheets.push(f.id); S.sheet = f.id; scheduleSave(); updateHUD(); buildCells(); renderShop(); });
+    sh.appendChild(el);
+  });
+  // Скины
+  const sl = document.getElementById('skinList'); sl.innerHTML = '';
+  SKINS.forEach(sk => {
+    const owned = S.skins.includes(sk.id), active = S.skin === sk.id;
+    const dot = `<div class="dot" style="background:radial-gradient(circle at 32% 30%, ${sk.dome(3, 6)}, #0008);box-shadow:inset 0 -3px 5px #0007"></div>`;
+    let el;
+    if (active) el = rowEl(nameOf(sk), dot, T('chosenM'), 'sel', true);
+    else if (owned) el = rowEl(nameOf(sk), dot, T('choose'), 'sel', false, () => { S.skin = sk.id; scheduleSave(); renderShop(); });
+    else if (sk.price === 'ad') el = rowEl(nameOf(sk), dot, T('adOpen'), 'ad', false, () => showRewardedAd(() => { S.skins.push(sk.id); S.skin = sk.id; scheduleSave(); renderShop(); }));
+    else el = rowEl(nameOf(sk), dot, '🫧 ' + sk.price, 'buy', S.wallet < sk.price, () => { S.wallet -= sk.price; S.skins.push(sk.id); S.skin = sk.id; scheduleSave(); updateHUD(); renderShop(); });
+    sl.appendChild(el);
+  });
+  // Звуки
+  const ql = document.getElementById('soundList'); ql.innerHTML = '';
+  SOUNDS.forEach(sd => {
+    const owned = S.sounds.includes(sd.id), active = S.sound === sd.id;
+    let el;
+    if (active) el = rowEl(nameOf(sd), '🔊', T('playing'), 'sel', true);
+    else if (owned) el = rowEl(nameOf(sd), '🔊', T('enable'), 'sel', false, () => { S.sound = sd.id; scheduleSave(); popSound(); renderShop(); });
+    else if (sd.price === 'ad') el = rowEl(nameOf(sd), '🔇', T('adOpen'), 'ad', false, () => showRewardedAd(() => { S.sounds.push(sd.id); S.sound = sd.id; scheduleSave(); renderShop(); }));
+    else el = rowEl(nameOf(sd), '🔇', '🫧 ' + sd.price, 'buy', S.wallet < sd.price, () => { S.wallet -= sd.price; S.sounds.push(sd.id); S.sound = sd.id; scheduleSave(); updateHUD(); popSound(); renderShop(); });
+    ql.appendChild(el);
+  });
+  // Стикеры
+  const st = document.getElementById('stickers'); st.innerHTML = '';
+  STICKERS.forEach(s => {
+    const sp = document.createElement('span');
+    const owned = S.stickers.includes(s.id);
+    sp.textContent = owned ? s.e : '❔'; if (!owned) sp.classList.add('lock');
+    sp.title = s.name;
+    st.appendChild(sp);
+  });
+  const cp = document.getElementById('colProg');
+  if (cp) {
+    const k = S.stickers.length;
+    cp.textContent = T('colTitle') + ' ' + k + '/' + STICKERS.length + (k >= STICKERS.length ? ' — 🏆 ' + T('trophy') : '');
+  }
+}
+
+let saveTimer = null;
+function scheduleSave() { clearTimeout(saveTimer); saveTimer = setTimeout(() => saveGame(S), 600); }
+
+// ═════════════════════ ГЛАВНЫЙ ЦИКЛ ═════════════════════
+let lastT = performance.now();
+function frame(t) {
+  const dt = Math.min(.05, (t - lastT) / 1000); lastT = t;
+  if (soundBudget > 0 && t % 100 < 17) soundBudget = Math.max(0, soundBudget - 1);
+  if (streakT > 0) { streakT -= dt; if (streakT <= 0) { streak = 0; updateHUD(); } }
+  const sk = skin();
+
+  // 🌙 Дыхание: цикл 12с — 4с вдох (подсветка цели) / 2с задержка / 6с выдох (мягкие хлопки)
+  let breathGlow = null;
+  if (S.breath && phase === 'play') {
+    breathT = (breathT + dt) % 12;
+    if (breathT >= 6) {
+      breathPop += dt;
+      if (breathPop > 1.4) { breathPop = 0; const left = cells.filter(c => !c.popped); if (left.length) doPop(left[Math.floor(Math.random() * left.length)], false); }
+    }
+    if (breathT < 4) { // цель ждёт выдоха — подсвечиваем
+      const left = cells.filter(c => !c.popped);
+      if (left.length) breathGlow = left[(Math.floor(t / 4000) * 7) % left.length];
+    }
+  } else breathT = 0;
+
+  // 🥤 фоновое шипение лимонада
+  if (sk.fizz) {
+    fizzT += dt;
+    if (fizzT > .18) { fizzT = 0; particles.push({ x: Math.random() * W, y: H + 6, dx: (Math.random() - .5) * 12, dy: -(30 + Math.random() * 50), r: 1.5 + Math.random() * 2.5, c: 'rgba(255,240,180,.5)', a: .9, vanish: 'fizz', life: 4 }); }
+  }
+
+  ctx.clearRect(0, 0, W, H);
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, sk.bg); bg.addColorStop(1, sk.bg2 || sk.bg);
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+  // дыхательный тон экрана
+  if (S.breath) {
+    const ph = S.breath ? ((breathT < 4 ? breathT / 4 : breathT < 6 ? 1 : 1 - (breathT - 6) / 6)) : 0;
+    ctx.fillStyle = `rgba(140,190,255,${.05 * (ph || 0)})`; ctx.fillRect(0, 0, W, H);
+  }
+
+  drawFrame(t); // силиконовая рамка + бегущий свет (v3)
+
+  ctx.save();
+  if (shakeT > 0) { shakeT -= dt; ctx.translate((Math.random() - .5) * 7 * shakeT, (Math.random() - .5) * 7 * shakeT); }
+
+  let scaleX = 1;
+  if (phase === 'flipOut' || phase === 'flipIn') {
+    flipT += dt / .3;
+    if (flipT >= 1) {
+      if (phase === 'flipOut') { refillFromFlip(); S.flips++; missionTick(); phase = 'flipIn'; flipT = 0; }
+      else { phase = 'play'; flipT = 0; }
+    }
+    scaleX = phase === 'flipOut' ? 1 - flipT : flipT;
+  }
+  ctx.translate(W / 2, 0); ctx.scale(Math.max(.02, scaleX), 1); ctx.translate(-W / 2, 0);
+
+  for (const c of cells) {
+    const since = c.popped ? (t - c.popT) / 1000 : -1;
+    const wob = c.popped ? 0 : Math.sin(t / 900 + c.cIdx * 1.7) * R * .015;
+    const rr = R * .86 + wob;
+    if (!c.popped) {
+      const g = ctx.createRadialGradient(c.x - rr * .3, c.y - rr * .35, rr * .1, c.x, c.y, rr);
+      g.addColorStop(0, '#ffffff55');
+      g.addColorStop(.25, c.gold ? '#ffd700' : sk.dome(c.cIdx, 24));
+      g.addColorStop(1, c.gold ? 'rgba(120,80,0,.6)' : 'rgba(0,0,0,.45)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(c.x, c.y, rr, 0, 7); ctx.fill();
+      if (c.gold) { // искры золотого
+        const sp = Math.sin(t / 160 + c.cIdx) > .3 ? 1 : 0;
+        if (sp) { ctx.fillStyle = '#fff8'; ctx.beginPath(); ctx.arc(c.x + rr * .4, c.y - rr * .4, 2.2, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc(c.x - rr * .35, c.y + rr * .3, 1.6, 0, 7); ctx.fill(); }
+      }
+      if (breathGlow === c) { ctx.strokeStyle = 'rgba(160,210,255,.8)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(c.x, c.y, rr + 5, 0, 7); ctx.stroke(); }
+    } else {
+      const sq = Math.min(1, since * 8);
+      ctx.fillStyle = 'rgba(0,0,0,.42)';
+      ctx.beginPath(); ctx.arc(c.x, c.y, rr * .82, 0, 7); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.10)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(c.x, c.y, rr * .82 * sq + rr * .18 * (1 - sq), 0, 7); ctx.stroke();
+    }
+  }
+  ctx.restore();
+
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    if (p.vanish === 'fizz') {
+      p.life -= dt; p.x += p.dx * dt; p.y += p.dy * dt;
+      if (p.life <= 0 || p.y < -10) { particles.splice(i, 1); continue; }
+      ctx.fillStyle = p.c; ctx.globalAlpha = Math.min(p.a, p.life / 2);
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill(); ctx.globalAlpha = 1; continue;
+    }
+    p.a -= dt * (p.vanish === 'ring' ? 2.6 : 1.8);
+    if (p.a <= 0) { particles.splice(i, 1); continue; }
+    if (p.vanish === 'ring') {
+      p.r += p.vr * dt;
+      ctx.strokeStyle = p.c; ctx.globalAlpha = p.a; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.stroke(); ctx.globalAlpha = 1;
+    } else {
+      p.life -= dt; p.x += p.dx * dt; p.y += p.dy * dt; p.dy += 320 * dt;
+      ctx.fillStyle = p.c; ctx.globalAlpha = Math.max(0, p.a);
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+    }
+  }
+  if (!firstFrameDone) { firstFrameDone = true; markReady(); }
+  requestAnimationFrame(frame);
+}
+
+// Подмена статичных подписей под выбранный язык (п. 2.14 — на старте).
+function applyStaticTexts() {
+  const byId = id => document.getElementById(id);
+  byId('shopTitle').textContent = T('shop');
+  byId('grSheets').textContent = T('grSheets');
+  byId('grSkins').textContent = T('grSkins');
+  byId('grSounds').textContent = T('grSounds');
+  byId('grStickers').textContent = T('grStickers');
+  byId('unboxHint').textContent = T('unboxHint');
+  setMegaLabel();
+  byId('musicBtn').title = T('titleMusic');
+  byId('breathBtn').title = T('titleBreath');
+  byId('shopBtn').title = T('titleShop');
+  byId('muteBtn').title = T('titleMute');
+  byId('misBtn').title = T('misBtnTitle');
+  byId('posBtn').title = T('posBtnTitle');
+  byId('langBtn').title = (LANG === 'en') ? 'Language: English -> tap for Russian' : 'Язык: русский -> нажми для английского';
+  byId('spBtn').textContent = T('splashPlay');
+  updateSplashHint();
+  const spStatsEl = byId('spStats');
+  if (spStatsEl) spStatsEl.textContent = T('splashStats').replace('{t}', S.total).replace('{s}', S.bestStreak);
+  byId('posterHint').textContent = T('posHint');
+  const spTitleEl = byId('spTitle'), spTagEl = byId('spTag');
+  if (spTitleEl) spTitleEl.textContent = (LANG === 'en') ? 'Pupyrka' : 'Пупырка';
+  if (spTagEl) spTagEl.textContent = (LANG === 'en') ? 'endless bubble wrap' : 'вечная плёнка';
+  document.title = (LANG === 'en') ? 'Pupyrka - Endless Bubble Wrap' : 'Пупырка — вечная плёнка';
+  updateHUD(); renderShop(); renderMissions();
+}
+
+// ═════════════════════ СТАРТ ═════════════════════
+if (S.muted) document.getElementById('muteBtn').textContent = '🔇';
+setMegaLabel();
+if (S.music) musicBtn.classList.add('on');
+if (S.breath) breathBtn.classList.add('on');
+window.addEventListener('resize', () => buildCells());
+document.addEventListener('visibilitychange', () => { // фокус потерян — звук на паузу (политика площадок)
+  try { if (!AC) return; if (document.hidden) AC.suspend(); else if (!S.muted) AC.resume(); } catch (e) {}
+});
+try { if (S.lang === 'ru' || S.lang === 'en') LANG = S.lang; } catch (e) {}
+try { document.documentElement.lang = LANG; } catch (e) {}
+buildCells(); updateHUD(); renderShop(); renderMissions(); applyStaticTexts(); initSDK();
+requestAnimationFrame(t => { lastT = t; frame(t); });
+</script>
+</body>
+</html>
